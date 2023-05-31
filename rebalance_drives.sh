@@ -8,20 +8,20 @@ parse_args() {
   percent=0.25
   pool="/srv/mergerfs/backend"
   tools="/root/mergerfs-tools/src"
+  scrub=false
 
   # Use getopt to parse command line arguments
-  ARGS=$(getopt -o hc:p:l:t: --long help,config:,percent:,pool:,tools: --name "$(basename "$0")" -- "$@")
+  ARGS=$(getopt -o hc:p:l:t:s --long help,config:,percent:,pool:,tools:,scrub --name "$(basename "$0")" -- "$@")
   # Get the command line arguments and assign them to variables according to their corresponding flags
   # h: -> means the -h flag needs an argument
-  # l -> means the -l flag doesn't have an argument 
-  # "hc:p:l:t:" -> all the possible flags
+  # l -> means the -l flag doesn't have an argument
 
   eval set -- "${ARGS}"  # This sets positional parameters to the arguments that were used in getopt
 
   while true; do  # Start loop to go through all command line arguments
     case "${1}" in  
       -h|--help)  # Show usage information and exit
-        echo "Usage: $(basename "$0") [-c configs] [-p percent] [-l pool] [-t tools]"
+        echo "Usage: $(basename "$0") [-c configs] [-p percent] [-l pool] [-t tools] [-s scrub]"
         exit 0
         ;;
       -c|--configs)  # Change default configuration files to be used
@@ -39,6 +39,10 @@ parse_args() {
       -t|--tools)  # Change path to mergerfs tool binaries
         tools="${2}"
         shift 2
+        ;;
+      -s|--scrub)
+        scrub=true
+        shift 1
         ;;
       --)  # End of arguments
         shift
@@ -78,6 +82,11 @@ remove_snapper_snapshots() {
   done
 }
 
+scrub_snapraid() {
+  echo "Starting full SnapRAID scrub"
+  snapraid-btrfs scrub -p full
+}
+
 dedup_mergerfs() {
   local tools="$1"
   local pool="$2"
@@ -112,13 +121,14 @@ sync_snapraid_parity() {
   snapraid-btrfs sync
 }
 
-##################### MAIN SCRIPT ###################################
+##################### MAIN SCRIPT #####################
 
 # Call function to parse command line arguments
 parse_args "$@"
 
 # Call each function separately
 disable_snapper ${configs[@]}
+[[ $scrub == true ]] && scrub_snapraid
 dedup_mergerfs ${tools} ${pool}
 remove_snapper_snapshots ${configs[@]}
 remove_snapraid_data
