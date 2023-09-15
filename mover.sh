@@ -24,15 +24,18 @@ then
   POST_MOVE=$(mktemp)
   # Get list of files currently on the CACHE
   find ${CACHE} -type f | sort > ${PRE_MOVE}
-  while [ $(df --output=pcent "${CACHE}" | grep -v Use | cut -d'%' -f1) -gt ${TARGET_PERCENTAGE} ]
+  ATIME_SORTED_LIST=$(find "${CACHE}" -type f -printf '%A@ %P\n' | sort | cut -d' ' -f2-)
+  while IFS= read -r file
   do
-    FILE=$(find "${CACHE}" -type f -printf '%A@ %P\n' | \
-        sort | \
-        head -n 1 | \
-        cut -d' ' -f2-)
-    test -n "${FILE}"
-    rsync -axqHAXWESR --preallocate --remove-source-files "${CACHE}/./${FILE}" "${BACKING}/"
-  done
+    if [ $(df --output=pcent "${CACHE}" | grep -v Use | cut -d'%' -f1) -gt ${TARGET_PERCENTAGE} ]
+      then
+      test -n "${file}"
+      rsync -axqHAXWESR --preallocate --remove-source-files "${CACHE}/./${file}" "${BACKING}/"
+    else
+      echo "Finished"
+      break
+    fi
+  done <<< "${ATIME_SORTED_LIST}"
   # Get the difference between pre and post and email results
   find ${CACHE} -type f | sort > ${POST_MOVE}
   comm -2 -3 ${PRE_MOVE} ${POST_MOVE} | mail -s "Files moved from ${CACHE} to ${BACKING}" JMcDade42@gmail.com
