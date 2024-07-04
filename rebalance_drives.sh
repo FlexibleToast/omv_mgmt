@@ -94,6 +94,7 @@ dedup_mergerfs() {
   printf 'Dedup mergerfs\n'
   dedup_result=$("${tools}/mergerfs.dedup" -v -D .snapshots -D snapraid --dedup=newest "${pool}" | tee /dev/tty)
   savings=$(echo "${dedup_result}" | tail -n 1 | awk '{print $4}')
+  echo $savings
   if [ "${savings%.*}" -gt 0 ]; then
     read -p "Perform dedup? [y/N] " dedup
     [[ "${dedup}" =~ ^(y|Y|yes|Yes)$ ]] && "${tools}/mergerfs.dedup" -e -D .snapshots -D snapraid --dedup=newest "${pool}"
@@ -129,9 +130,9 @@ parse_args "$@"
 # Call each function separately
 disable_snapper ${configs[@]}
 [[ $scrub == true ]] && scrub_snapraid
-dedup_mergerfs ${tools} ${pool}
+dedup_mergerfs "${tools}" "${pool}"
 remove_snapper_snapshots ${configs[@]}
 remove_snapraid_data
-rebalance_data ${tools} ${percent} ${pool}
+rebalance_data "${tools}" "${percent}" "${pool}"
 sync_snapraid_parity
 enable_snapper ${configs[@]}
