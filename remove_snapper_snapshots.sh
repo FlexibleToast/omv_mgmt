@@ -18,7 +18,7 @@ parse_args() {
   eval set -- "${ARGS}"  # This sets positional parameters to the arguments that were used in getopt
 
   while true; do
-    case "${1}" in  
+    case "${1}" in
       -h|--help)
         echo "Usage: $(basename "$0") [-c configs] [--enable | --disable]"
         exit 0
